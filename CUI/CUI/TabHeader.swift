@@ -14,8 +14,6 @@ public class TabHeader: UIView {
     let container = UIStackView()
     let indicatorLine = UIView()
     let bottomSeparatorLine = UIView()
-    let topMargin: CGFloat = 5.0
-    let bottomMargin: CGFloat = 5.0
     var indicatorLeading = NSLayoutConstraint()
     var indicatorTrailing = NSLayoutConstraint()
     var previousBtn = UIButton()
