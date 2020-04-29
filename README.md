@@ -1,5 +1,5 @@
 # CUI
-###TabHeader
+### TabHeader
 ```
 let header1 = TabHeader(with: ["新闻","电影","纪录片"])
 view.addSubview(header1)
