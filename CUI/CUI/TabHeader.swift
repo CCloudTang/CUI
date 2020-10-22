@@ -13,6 +13,7 @@ public class TabHeader: UIView {
     let scrollView: UIScrollView = UIScrollView()
     let container = UIStackView()
     let indicatorLine = UIView()
+    let indicatorBG = UIView()
     let bottomSeparatorLine = UIView()
     var indicatorLeading = NSLayoutConstraint()
     var indicatorTrailing = NSLayoutConstraint()
@@ -25,9 +26,6 @@ public class TabHeader: UIView {
         self.titles = titles
         self.style = style
         super.init(frame: .zero)
-        guard titles.count > 0 else {
-            return
-        }
         setupSubviews()
     }
     
@@ -38,13 +36,21 @@ public class TabHeader: UIView {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(scrollView)
         
+        scrollView.addSubview(indicatorBG)
+        indicatorBG.backgroundColor = style.indicatorColor
+        indicatorBG.translatesAutoresizingMaskIntoConstraints = false
+        
         container.axis = .horizontal
         container.alignment = .center
         container.spacing = style.margin
         container.translatesAutoresizingMaskIntoConstraints = false
         switch style.type {
-        case .fixed:
-            container.distribution = .fillEqually
+        case .fixed(let equal):
+            if equal {
+                container.distribution = .fillEqually
+            } else {
+                container.distribution = .fillProportionally
+            }
         case .scrollable:
             container.distribution = .equalSpacing
         }
@@ -56,32 +62,10 @@ public class TabHeader: UIView {
         
         indicatorLine.translatesAutoresizingMaskIntoConstraints = false
         indicatorLine.backgroundColor = style.indicatorColor
-        indicatorLine.layer.cornerRadius = style.indicatorHeight * 0.5
+        indicatorLine.layer.cornerRadius = style.indicatorLineHeight * 0.5
         addSubview(indicatorLine)
         
-        for title in titles {
-            let btn = UIButton(type: .custom)
-            btn.setTitle(title, for: .normal)
-            btn.addTarget(self, action: #selector(titleButtonAction(_:)), for: .touchUpInside)
-            btn.setTitleColor(style.titleNormalColor, for: .normal)
-            btn.setTitleColor(style.titleSelectedColor, for: .selected)
-            btn.titleLabel?.font = style.titleNormalFont
-            btn.titleLabel?.adjustsFontForContentSizeCategory = true
-            switch style.type {
-            case .fixed:
-                btn.titleLabel?.numberOfLines = 0
-            case .scrollable:
-                btn.titleLabel?.numberOfLines = 1
-            }
-            titleButtons.append(btn)
-            container.addArrangedSubview(btn)
-        }
-        let defaultBtn = titleButtons[style.defaultSelectIndex]
-        previousBtn = defaultBtn
-        defaultBtn.titleLabel?.font = style.titleSelectedFont
-        defaultBtn.isSelected = true
-        indicatorLeading = indicatorLine.leadingAnchor.constraint(equalTo: defaultBtn.leadingAnchor)
-        indicatorTrailing = indicatorLine.trailingAnchor.constraint(equalTo: defaultBtn.trailingAnchor)
+        updateTitles(titles)
 
         NSLayoutConstraint.activate([
             scrollView.leftAnchor.constraint(equalTo: self.leftAnchor),
@@ -100,11 +84,14 @@ public class TabHeader: UIView {
             bottomSeparatorLine.bottomAnchor.constraint(equalTo: self.bottomAnchor),
             bottomSeparatorLine.heightAnchor.constraint(equalToConstant: style.separatorHeight),
             
-            indicatorLine.heightAnchor.constraint(equalToConstant: style.indicatorHeight),
+            indicatorLine.heightAnchor.constraint(equalToConstant: style.indicatorLineHeight),
             indicatorLine.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-            indicatorLeading,
-            indicatorTrailing,
         ])
+        
+        let indicatorBgHeight = style.titleSelectedFont.lineHeight + style.indicatorBGInsetTop * 2
+        indicatorBG.layer.cornerRadius = indicatorBgHeight * 0.5
+        indicatorBG.heightAnchor.constraint(equalToConstant: indicatorBgHeight).isActive = true
+        indicatorBG.centerYAnchor.constraint(equalTo: scrollView.centerYAnchor).isActive = true
         
         switch style.type {
         case .fixed:
@@ -114,6 +101,54 @@ public class TabHeader: UIView {
         case .scrollable:
             moveTitleToCenter(previousBtn)
         }
+        
+    }
+    
+    func updateTitles(_ titles: [String]) {
+        if titles.isEmpty {
+            return
+        }
+        for btn in titleButtons {
+            container.removeArrangedSubview(btn)
+            btn.removeFromSuperview()
+        }
+        titleButtons.removeAll()
+        NSLayoutConstraint.deactivate([self.indicatorLeading,self.indicatorTrailing])
+
+        for title in titles {
+            let btn = UIButton(type: .custom)
+            btn.setTitle(title, for: .normal)
+            btn.addTarget(self, action: #selector(titleButtonAction(_:)), for: .touchUpInside)
+            btn.setTitleColor(style.titleNormalColor, for: .normal)
+            btn.setTitleColor(style.titleSelectedColor, for: .selected)
+            btn.titleLabel?.font = style.titleNormalFont
+            btn.titleLabel?.adjustsFontForContentSizeCategory = true
+            switch style.type {
+            case .fixed:
+                btn.titleLabel?.numberOfLines = 0
+            case .scrollable:
+                btn.titleLabel?.numberOfLines = 1
+            }
+            titleButtons.append(btn)
+            container.addArrangedSubview(btn)
+        }
+        var index = 0
+        if style.defaultSelectIndex < titles.count {
+            index = style.defaultSelectIndex
+        }
+        let defaultBtn = titleButtons[index]
+        previousBtn = defaultBtn
+        defaultBtn.titleLabel?.font = style.titleSelectedFont
+        defaultBtn.isSelected = true
+        if style.indicatorType == .line {
+            indicatorLeading = indicatorLine.leadingAnchor.constraint(equalTo: defaultBtn.leadingAnchor)
+            indicatorTrailing = indicatorLine.trailingAnchor.constraint(equalTo: defaultBtn.trailingAnchor)
+        } else {
+            indicatorLeading = indicatorBG.leadingAnchor.constraint(equalTo: defaultBtn.leadingAnchor)
+            indicatorTrailing = indicatorBG.trailingAnchor.constraint(equalTo: defaultBtn.trailingAnchor)
+        }
+        indicatorLeading.isActive = true
+        indicatorTrailing.isActive = true
         
     }
     
@@ -127,8 +162,13 @@ public class TabHeader: UIView {
         moveTitleToCenter(btn)
         UIView.animate(withDuration: 0.3) {
             NSLayoutConstraint.deactivate([self.indicatorLeading,self.indicatorTrailing])
-            self.indicatorLeading = self.indicatorLine.leadingAnchor.constraint(equalTo: btn.leadingAnchor)
-            self.indicatorTrailing = self.indicatorLine.trailingAnchor.constraint(equalTo: btn.trailingAnchor)
+            if self.style.indicatorType == .line {
+                self.indicatorLeading = self.indicatorLine.leadingAnchor.constraint(equalTo: btn.leadingAnchor)
+                self.indicatorTrailing = self.indicatorLine.trailingAnchor.constraint(equalTo: btn.trailingAnchor)
+            } else {
+                self.indicatorLeading = self.indicatorBG.leadingAnchor.constraint(equalTo: btn.leadingAnchor)
+                self.indicatorTrailing = self.indicatorBG.trailingAnchor.constraint(equalTo: btn.trailingAnchor)
+            }
             NSLayoutConstraint.activate([self.indicatorLeading,self.indicatorTrailing])
             self.layoutIfNeeded()
         }
@@ -167,20 +207,26 @@ public protocol TabHeaderDelegate: class {
 
 public struct TabHeaderStyle {
     public var backgroundColor: UIColor = .white
-    public var type: StyleType = .fixed
+    public var type: StyleType = .fixed(true)
     public var margin: CGFloat = 10
     public var separatorColor: UIColor = .lightGray
     public var separatorHeight: CGFloat = 1
     public var indicatorColor: UIColor = .red
-    public var indicatorHeight: CGFloat = 3
+    public var indicatorLineHeight: CGFloat = 3
+    public var indicatorType: IndicatorType = .line
+    public var indicatorBGInsetTop: CGFloat = 2
     public var titleNormalColor: UIColor = .lightGray
     public var titleSelectedColor: UIColor = .red
     public var titleNormalFont: UIFont = UIFont.systemFont(ofSize: 14)
     public var titleSelectedFont: UIFont = UIFont.systemFont(ofSize: 14)
     public var defaultSelectIndex: Int = 0
     public enum StyleType {
-        case fixed
+        case fixed(_ equal: Bool)
         case scrollable
+    }
+    public enum IndicatorType {
+        case line
+        case background
     }
     
     public init() { }
