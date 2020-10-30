@@ -86,6 +86,22 @@ class ViewController: UIViewController {
             header5.heightAnchor.constraint(equalToConstant: 40),
         ])
         header5.updateTitles(["早间新闻","电影","纪录片"])
+        
+        var style6 = TabHeaderStyle()
+        style6.type = TabHeaderStyle.StyleType.scrollable
+        style6.margin = 50
+        style6.shouldMoveToCenter = false
+        let titles6 = ["精选","早间新闻","电影"]
+        let header6 = TabHeader(with: titles6, style: style6)
+        view.addSubview(header6)
+        header6.backgroundColor = .yellow
+        header6.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            header6.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 0),
+            header6.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: 0),
+            header6.topAnchor.constraint(equalTo: header5.bottomAnchor, constant: 30),
+            header6.heightAnchor.constraint(equalToConstant: 40),
+        ])
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {

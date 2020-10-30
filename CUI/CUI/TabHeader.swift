@@ -180,6 +180,9 @@ public class TabHeader: UIView {
         delegate?.tabSelect(at: index)
     }
     private func moveTitleToCenter(_ btn: UIButton){
+        if style.shouldMoveToCenter == false {
+            return
+        }
         layoutIfNeeded()
         let width = scrollView.frame.size.width
         var offsetX = btn.center.x - width * 0.5
@@ -220,6 +223,8 @@ public struct TabHeaderStyle {
     public var titleNormalFont: UIFont = UIFont.systemFont(ofSize: 14)
     public var titleSelectedFont: UIFont = UIFont.systemFont(ofSize: 14)
     public var defaultSelectIndex: Int = 0
+    public var shouldMoveToCenter: Bool = true
+
     public enum StyleType {
         case fixed(_ equal: Bool)
         case scrollable
