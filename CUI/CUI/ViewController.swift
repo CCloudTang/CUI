@@ -89,7 +89,7 @@ class ViewController: UIViewController {
         
         var style6 = TabHeaderStyle()
         style6.type = TabHeaderStyle.StyleType.scrollable
-        style6.margin = 50
+        style6.margin = 100
         style6.shouldMoveToCenter = false
         let titles6 = ["精选","早间新闻","电影"]
         let header6 = TabHeader(with: titles6, style: style6)

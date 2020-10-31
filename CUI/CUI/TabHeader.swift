@@ -75,8 +75,8 @@ public class TabHeader: UIView {
             
             container.topAnchor.constraint(equalTo: scrollView.topAnchor),
             container.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            container.leftAnchor.constraint(equalTo: scrollView.leftAnchor, constant: style.margin),
-            container.rightAnchor.constraint(equalTo: scrollView.rightAnchor, constant: -style.margin),
+            container.leftAnchor.constraint(equalTo: scrollView.leftAnchor, constant: style.leftPadding),
+            container.rightAnchor.constraint(equalTo: scrollView.rightAnchor, constant: -style.rightPadding),
             container.heightAnchor.constraint(equalTo: scrollView.heightAnchor),
             
             bottomSeparatorLine.leftAnchor.constraint(equalTo: self.leftAnchor),
@@ -212,6 +212,8 @@ public struct TabHeaderStyle {
     public var backgroundColor: UIColor = .white
     public var type: StyleType = .fixed(true)
     public var margin: CGFloat = 10
+    public var leftPadding: CGFloat = 10
+    public var rightPadding: CGFloat = 10
     public var separatorColor: UIColor = .lightGray
     public var separatorHeight: CGFloat = 1
     public var indicatorColor: UIColor = .red
@@ -224,7 +226,7 @@ public struct TabHeaderStyle {
     public var titleSelectedFont: UIFont = UIFont.systemFont(ofSize: 14)
     public var defaultSelectIndex: Int = 0
     public var shouldMoveToCenter: Bool = true
-
+    
     public enum StyleType {
         case fixed(_ equal: Bool)
         case scrollable
