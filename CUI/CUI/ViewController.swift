@@ -89,7 +89,11 @@ class ViewController: UIViewController {
         
         var style6 = TabHeaderStyle()
         style6.type = TabHeaderStyle.StyleType.scrollable
-        style6.margin = 100
+        style6.margin = 30
+//        style6.leftPadding = 0
+        style6.indicatorWidth = 20
+        style6.indicatorWidthType = .fixed
+        style6.indicatorMoveType = .follow
         style6.shouldMoveToCenter = false
         let titles6 = ["精选","早间新闻","电影"]
         let header6 = TabHeader(with: titles6, style: style6)
@@ -102,12 +106,53 @@ class ViewController: UIViewController {
             header6.topAnchor.constraint(equalTo: header5.bottomAnchor, constant: 30),
             header6.heightAnchor.constraint(equalToConstant: 40),
         ])
+        header = header6
+
+        let scrollV = UIScrollView()
+        view.addSubview(scrollV)
+        scrollV.translatesAutoresizingMaskIntoConstraints = false
+        scrollV.isPagingEnabled = true
+        scrollV.delegate = self
+        NSLayoutConstraint.activate([
+            scrollV.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 0),
+            scrollV.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: 0),
+            scrollV.topAnchor.constraint(equalTo: header6.bottomAnchor, constant: 20),
+            scrollV.heightAnchor.constraint(equalToConstant: 100),
+        ])
+        
+        let screenW = UIScreen.main.bounds.width
+        scrollV.contentSize = CGSize(width: screenW * CGFloat(titles6.count), height: 0)
+        for i in 0..<titles6.count {
+            let v = UIView()
+            scrollV.addSubview(v)
+            v.translatesAutoresizingMaskIntoConstraints = false
+            if i % 2 == 0 {
+                v.backgroundColor = .yellow
+            } else {
+                v.backgroundColor = .purple
+            }
+            NSLayoutConstraint.activate([
+                v.leadingAnchor.constraint(equalTo: scrollV.leadingAnchor, constant: CGFloat(i) * screenW),
+                v.topAnchor.constraint(equalTo: scrollV.topAnchor, constant: 0),
+                v.heightAnchor.constraint(equalToConstant: 100),
+                v.widthAnchor.constraint(equalToConstant: screenW)
+            ])
+        }
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         header?.selectIndex(2)
     }
 
+}
+extension ViewController: UIScrollViewDelegate {
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        header?.updateIndicatorFrame(scrollView: scrollView)
+    }
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        header?.updateSelectIndex(scrollView: scrollView)
+    }
+    
 }
 extension ViewController: TabHeaderDelegate {
     func tabSelect(at index: Int) {

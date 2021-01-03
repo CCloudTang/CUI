@@ -17,6 +17,8 @@ public class TabHeader: UIView {
     let bottomSeparatorLine = UIView()
     var indicatorLeading = NSLayoutConstraint()
     var indicatorTrailing = NSLayoutConstraint()
+    var indicatorWidthAnchor = NSLayoutConstraint()
+
     var previousBtn = UIButton()
     var titleButtons: [UIButton] = []
     var selectHandle: ((Int) -> Void)?
@@ -35,7 +37,7 @@ public class TabHeader: UIView {
         scrollView.showsHorizontalScrollIndicator = false
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(scrollView)
-        
+
         scrollView.addSubview(indicatorBG)
         indicatorBG.backgroundColor = style.indicatorColor
         indicatorBG.translatesAutoresizingMaskIntoConstraints = false
@@ -88,7 +90,10 @@ public class TabHeader: UIView {
             indicatorLine.bottomAnchor.constraint(equalTo: container.bottomAnchor),
         ])
         
-        let indicatorBgHeight = style.titleSelectedFont.lineHeight + style.indicatorBGInsetTop * 2
+        var indicatorBgHeight = style.titleSelectedFont.lineHeight + style.indicatorBGInsetTop * 2
+        if style.indicatorBGHeight > 0 {
+            indicatorBgHeight = style.indicatorBGHeight
+        }
         indicatorBG.layer.cornerRadius = indicatorBgHeight * 0.5
         indicatorBG.heightAnchor.constraint(equalToConstant: indicatorBgHeight).isActive = true
         indicatorBG.centerYAnchor.constraint(equalTo: scrollView.centerYAnchor).isActive = true
@@ -140,17 +145,40 @@ public class TabHeader: UIView {
         previousBtn = defaultBtn
         defaultBtn.titleLabel?.font = style.titleSelectedFont
         defaultBtn.isSelected = true
-        if style.indicatorType == .line {
-            indicatorLeading = indicatorLine.leadingAnchor.constraint(equalTo: defaultBtn.leadingAnchor)
-            indicatorTrailing = indicatorLine.trailingAnchor.constraint(equalTo: defaultBtn.trailingAnchor)
-        } else {
-            indicatorLeading = indicatorBG.leadingAnchor.constraint(equalTo: defaultBtn.leadingAnchor)
-            indicatorTrailing = indicatorBG.trailingAnchor.constraint(equalTo: defaultBtn.trailingAnchor)
-        }
-        indicatorLeading.isActive = true
-        indicatorTrailing.isActive = true
+        updateIndicator(animate: false)
         
     }
+    func updateIndicator(animate: Bool = false) {
+        let btn = previousBtn
+        let duration: TimeInterval = animate ? 0.3 : 0
+        UIView.animate(withDuration: duration) {
+            NSLayoutConstraint.deactivate([self.indicatorLeading,self.indicatorTrailing, self.indicatorWidthAnchor])
+
+            switch self.style.indicatorWidthType {
+            case .equal:
+                if self.style.indicatorType == .line {
+                    self.indicatorLeading = self.indicatorLine.leadingAnchor.constraint(equalTo: btn.leadingAnchor)
+                    self.indicatorTrailing = self.indicatorLine.trailingAnchor.constraint(equalTo: btn.trailingAnchor)
+                } else {
+                    self.indicatorLeading = self.indicatorBG.leadingAnchor.constraint(equalTo: btn.leadingAnchor)
+                    self.indicatorTrailing = self.indicatorBG.trailingAnchor.constraint(equalTo: btn.trailingAnchor)
+                }
+                NSLayoutConstraint.activate([self.indicatorLeading,self.indicatorTrailing])
+            case .fixed:
+                if self.style.indicatorType == .line {
+                    self.indicatorWidthAnchor = self.indicatorLine.widthAnchor.constraint(equalToConstant: self.style.indicatorWidth)
+                    self.indicatorLeading = self.indicatorLine.leadingAnchor.constraint(equalTo: btn.centerXAnchor, constant: -self.style.indicatorWidth *  0.5)
+
+                } else {
+                    self.indicatorWidthAnchor = self.indicatorBG.widthAnchor.constraint(equalToConstant: self.style.indicatorWidth)
+                    self.indicatorLeading = self.indicatorBG.leadingAnchor.constraint(equalTo: btn.centerXAnchor, constant: -self.style.indicatorWidth *  0.5)
+                }
+                NSLayoutConstraint.activate([self.indicatorLeading, self.indicatorWidthAnchor])
+            }
+            self.layoutIfNeeded()
+        }
+    }
+    
     
     @objc
     private func titleButtonAction(_ btn: UIButton) {
@@ -160,19 +188,7 @@ public class TabHeader: UIView {
         btn.isSelected = true
         previousBtn = btn
         moveTitleToCenter(btn)
-        UIView.animate(withDuration: 0.3) {
-            NSLayoutConstraint.deactivate([self.indicatorLeading,self.indicatorTrailing])
-            if self.style.indicatorType == .line {
-                self.indicatorLeading = self.indicatorLine.leadingAnchor.constraint(equalTo: btn.leadingAnchor)
-                self.indicatorTrailing = self.indicatorLine.trailingAnchor.constraint(equalTo: btn.trailingAnchor)
-            } else {
-                self.indicatorLeading = self.indicatorBG.leadingAnchor.constraint(equalTo: btn.leadingAnchor)
-                self.indicatorTrailing = self.indicatorBG.trailingAnchor.constraint(equalTo: btn.trailingAnchor)
-            }
-            NSLayoutConstraint.activate([self.indicatorLeading,self.indicatorTrailing])
-            self.layoutIfNeeded()
-        }
-        
+        updateIndicator(animate: true)
         guard let index = titleButtons.firstIndex(of: btn) else {
             return
         }
@@ -199,6 +215,49 @@ public class TabHeader: UIView {
         let btn = titleButtons[index]
         titleButtonAction(btn)
     }
+    public func updateSelectIndex(scrollView: UIScrollView) {
+        let contentOffsetX = scrollView.contentOffset.x
+        let width = scrollView.bounds.width
+        let scale = contentOffsetX / width
+        let index = Int(scale)
+        selectIndex(index)
+    }
+    public func updateIndicatorFrame(scrollView: UIScrollView) {
+        let point = scrollView.panGestureRecognizer.translation(in: scrollView)
+        let contentOffsetX = scrollView.contentOffset.x
+        let width = scrollView.bounds.width
+        var scale = contentOffsetX / width
+        let index = Int(scale)
+        scale = scale - CGFloat(index)
+        let leftBtn = titleButtons[index]
+        var rightBtn = titleButtons[index]
+        if (index + 1) < titleButtons.count {
+            rightBtn = titleButtons[index + 1]
+        }
+        if point.x < 0 {
+            //向 ← 拖动
+        } else {
+            //向 → 拖动
+        }
+        let centerBetween = rightBtn.center.x - leftBtn.center.x
+        var rect = indicatorLine.frame
+        if scale < 0.5 {
+            rect.origin.x = style.leftPadding + leftBtn.center.x - style.indicatorWidth * 0.5
+            rect.size.width = style.indicatorWidth + centerBetween * scale * 2
+        } else {
+            rect.origin.x = style.leftPadding + leftBtn.center.x + 2 * (scale - 0.5) * centerBetween - style.indicatorWidth * 0.5
+            rect.size.width = style.indicatorWidth + centerBetween * (1-scale) * 2
+        }
+        indicatorLine.frame = rect
+        NSLayoutConstraint.deactivate([self.indicatorLeading,self.indicatorTrailing, self.indicatorWidthAnchor])
+        if self.style.indicatorType == .line {
+            self.indicatorWidthAnchor = self.indicatorLine.widthAnchor.constraint(equalToConstant: rect.width)
+            self.indicatorLeading = self.indicatorLine.leadingAnchor.constraint(equalTo: leadingAnchor, constant: rect.origin.x)
+        }
+        NSLayoutConstraint.activate([self.indicatorLeading, self.indicatorWidthAnchor])
+
+    }
+    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
@@ -214,12 +273,16 @@ public struct TabHeaderStyle {
     public var margin: CGFloat = 10
     public var leftPadding: CGFloat = 10
     public var rightPadding: CGFloat = 10
-    public var separatorColor: UIColor = .lightGray
+    public var separatorColor: UIColor = .clear
     public var separatorHeight: CGFloat = 1
     public var indicatorColor: UIColor = .red
     public var indicatorLineHeight: CGFloat = 3
+    public var indicatorWidth: CGFloat = 30
+    public var indicatorWidthType: IndicatorWidthType = .equal
+    public var indicatorMoveType: IndicatorMoveType = .none
     public var indicatorType: IndicatorType = .line
     public var indicatorBGInsetTop: CGFloat = 2
+    public var indicatorBGHeight: CGFloat = -1
     public var titleNormalColor: UIColor = .lightGray
     public var titleSelectedColor: UIColor = .red
     public var titleNormalFont: UIFont = UIFont.systemFont(ofSize: 14)
@@ -234,6 +297,15 @@ public struct TabHeaderStyle {
     public enum IndicatorType {
         case line
         case background
+    }
+    
+    public enum IndicatorMoveType {
+        case none
+        case follow
+    }
+    public enum IndicatorWidthType {
+        case fixed
+        case equal
     }
     
     public init() { }
